@@ -9,6 +9,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    # 👇 REQUIRED because your secrets are Environment secrets
+    environment: dev
+
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
@@ -21,7 +24,7 @@ jobs:
     - name: Install Dependencies
       run: npm install
 
-    # 🔍 Validate required secrets (PREVENTS :latest ERROR)
+    # 🔍 Validate required secrets (prevents :latest error)
     - name: Validate secrets
       run: |
         if [ -z "${{ secrets.DOCKER_IMAGE }}" ]; then
@@ -36,9 +39,21 @@ jobs:
           echo "❌ DOCKER_PASSWORD secret is missing"
           exit 1
         fi
+        if [ -z "${{ secrets.EC2_HOST }}" ]; then
+          echo "❌ EC2_HOST secret is missing"
+          exit 1
+        fi
+        if [ -z "${{ secrets.EC2_USER }}" ]; then
+          echo "❌ EC2_USER secret is missing"
+          exit 1
+        fi
+        if [ -z "${{ secrets.EC2_SSH_KEY }}" ]; then
+          echo "❌ EC2_SSH_KEY secret is missing"
+          exit 1
+        fi
         echo "✅ All required secrets are present"
 
-    # 🐳 Setup Docker Buildx (Best practice)
+    # 🐳 Setup Docker build environment
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
@@ -51,7 +66,7 @@ jobs:
         echo "${{ secrets.DOCKER_PASSWORD }}" | docker login \
         -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-    - name: Push Docker Image
+    - name: Push Docker Image to Docker Hub
       run: |
         docker push ${{ secrets.DOCKER_IMAGE }}:latest
 
@@ -77,4 +92,4 @@ jobs:
             --restart unless-stopped \
             ${{ secrets.DOCKER_IMAGE }}:latest
 
-          echo "✅ Deployment completed"
+          echo "✅ Deployment completed successfully"
